@@ -1,30 +1,23 @@
 version: "3.8"
 services:
-  db:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-      - "3306:3306"
-    volumes:
-      - db_data:/var/lib/mysql
-
-  web:
+  backend:
     build: .
-    depends_on:
-      - db
+    container_name: template-backend
     env_file:
       - .env
+    environment:
+      # Expect external MySQL; set SQLALCHEMY_DATABASE_URI in .env
+      - SQLALCHEMY_DATABASE_URI
+      - SECRET_KEY
+      - JWT_SECRET_KEY
     ports:
       - "5000:5000"
-    volumes:
-      - ./:/app
-    command: flask run --host=0.0.0.0 --port=5000
-    # or use CMD from Dockerfile (gunicorn) in production
+    command: gunicorn -b 0.0.0.0:5000 manage:app --workers 2 --threads 4
 
-volumes:
-  db_data:
+  frontend:
+    build: ./frontend
+    container_name: template-frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
